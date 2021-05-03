@@ -1,0 +1,59 @@
+template: true
+valuesFilePath: ../values/gitRepoValues.yml
+
+resources:
+  - name: A_VerifyPipeInfo_GitRepo
+    type: GitRepo
+    configuration:
+      path: amirydev/Org_test_Automation
+      branches:
+        include: master
+      gitProvider: github_amirydev
+  - name: A_VerifyPipeInfo_BuildInfo
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: myArti
+      buildName: 'A_VerifyPipeInfo_GoBuildName'
+      buildNumber: '${run_id}'
+    # - name: A_VerifyPipeInfo__ReleaseBundle
+    #   type: ReleaseBundle
+    #   configuration:
+    #     sourceDistribution: s_distribution
+    #     name: A_VerifyPipeInfo_GoBuildName
+    #     version: '1'
+
+pipelines:
+  - name: A_VerifyPipeInfo_GoPipeline
+    steps:
+      - name: A_VerifyPipeInfo_GoBuild
+        type: GoBuild
+        configuration:
+          environmentVariables:
+            JFROG_CLI_BUILD_NAME: A_VerifyPipeInfo_GoBuildName
+            JFROG_CLI_BUILD_NUMBER: ${run_id}
+          inputResources:
+            - name: A_VerifyPipeInfo_GitRepo
+          integrations:
+            - name: myArti
+          sourceLocation: "tests/core/golang"
+          resolverRepo: local-go
+      - name: A_VerifyPipeInfo_GoPublishBinary
+        type: GoPublishBinary
+        configuration:
+          inputSteps:
+            - name: A_VerifyPipeInfo_GoBuild
+          outputResources:
+            - name: A_VerifyPipeInfo_BuildInfo
+          targetRepository: local-go
+          autoPublishBuildInfo: true
+        # - name: A_VerifyPipeInfo__CreateReleaseBundle
+        #   type: CreateReleaseBundle
+        #   configuration:
+        #     releaseBundleName: A_VerifyPipeInfo_GoBuildName
+        #     releaseBundleVersion: '1'
+        #     integrations:
+        #       - name: github_amirydev
+        #     inputResources:
+        #       - name: A_VerifyPipeInfo_BuildInfo
+        #     outputResources:
+        #       - name: A_VerifyPipeInfo__ReleaseBundle

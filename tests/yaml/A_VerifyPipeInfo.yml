@@ -1,0 +1,59 @@
+template: true
+valuesFilePath: ../values/gitRepoValues.yml
+
+resources:
+  - name: A_VerifyPipeInfo_GitRepo
+    type: GitRepo
+    configuration:
+      path: {{ .Values.GitHub.Org_test_Automation.path }}
+      branches:
+        include: master
+      gitProvider: s_gitHub
+  - name: A_VerifyPipeInfo_BuildInfo
+    type: BuildInfo
+    configuration:
+      sourceArtifactory: s_artifactory
+      buildName: 'A_VerifyPipeInfo_GoBuildName'
+      buildNumber: '${run_id}'
+  # - name: A_VerifyPipeInfo__ReleaseBundle
+    #   type: ReleaseBundle
+    #   configuration:
+    #     sourceDistribution: s_distribution
+    #     name: A_VerifyPipeInfo_GoBuildName
+    #     version: '1'
+
+pipelines:
+  - name: A_VerifyPipeInfo_GoPipeline
+    steps:
+      - name: A_VerifyPipeInfo_GoBuild
+        type: GoBuild
+        configuration:
+          environmentVariables:
+            JFROG_CLI_BUILD_NAME: A_VerifyPipeInfo_GoBuildName
+            JFROG_CLI_BUILD_NUMBER: ${run_id}
+          inputResources:
+            - name: A_VerifyPipeInfo_GitRepo
+          integrations:
+            - name: s_artifactory
+          sourceLocation: "tests/core/golang"
+          resolverRepo: test-automation-generic-promoted-local
+      - name: A_VerifyPipeInfo_GoPublishBinary
+        type: GoPublishBinary
+        configuration:
+          inputSteps:
+            - name: A_VerifyPipeInfo_GoBuild
+          outputResources:
+            - name: A_VerifyPipeInfo_BuildInfo
+          targetRepository: test-automation-generic-promoted-local
+          autoPublishBuildInfo: true
+        # - name: A_VerifyPipeInfo__CreateReleaseBundle
+        #   type: CreateReleaseBundle
+        #   configuration:
+        #     releaseBundleName: A_VerifyPipeInfo_GoBuildName
+        #     releaseBundleVersion: '1'
+        #     integrations:
+        #       - name: s_gitHub
+        #     inputResources:
+        #       - name: A_VerifyPipeInfo_BuildInfo
+        #     outputResources:
+        #       - name: A_VerifyPipeInfo__ReleaseBundle
